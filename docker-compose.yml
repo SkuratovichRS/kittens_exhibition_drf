@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres
+    env_file: '.env'
+    ports:
+      - '5432:5432'
+    volumes:
+      - ${PWD}/volumes/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres --quiet" ]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: api:latest
+    env_file: '.env'
+    ports:
+      - '8000:8000'
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py loaddata breeds_data &&
+             python manage.py runserver 0.0.0.0:8000"
+
+networks:
+  default:
+    name: service_network
